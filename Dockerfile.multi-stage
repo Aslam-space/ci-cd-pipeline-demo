@@ -1,0 +1,35 @@
+# Stage 1: Build Stage
+FROM node:20-alpine AS builder
+
+# Set working directory
+WORKDIR /app
+
+# Copy only package files first for caching
+COPY package*.json ./
+
+# Install dependencies
+RUN npm ci --silent
+
+# Copy rest of the app
+COPY app/ ./app/
+
+# Optional: Build step if you have a build process (e.g., React/Vue)
+# RUN npm run build
+
+# Stage 2: Production Stage
+FROM nginx:alpine
+
+# Remove default Nginx static files
+RUN rm -rf /usr/share/nginx/html/*
+
+# Copy built app from builder
+COPY --from=builder /app/app/ /usr/share/nginx/html/
+
+# Copy custom nginx config if you have one
+# COPY nginx.conf /etc/nginx/conf.d/default.conf
+
+# Expose port
+EXPOSE 80
+
+# Start Nginx
+CMD ["nginx", "-g", "daemon off;"]

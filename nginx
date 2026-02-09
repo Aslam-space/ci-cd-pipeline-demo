@@ -1,0 +1,22 @@
+server {
+    listen 80;
+    server_name _;
+
+    root /usr/share/nginx/html;
+    index index.html;
+
+    location / {
+        try_files $uri $uri/ =404;
+    }
+
+    # Serve images with caching
+    location /images/ {
+        expires 7d;           # Cache images for 7 days
+        add_header Cache-Control "public";
+    }
+
+    # Gzip for faster loading
+    gzip on;
+    gzip_types text/plain text/css application/javascript application/json image/svg+xml;
+    gzip_min_length 256;
+}

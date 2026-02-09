@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CI/CD Pipeline Demo</title>
+
+<style>
+:root{
+  --accent:#00ffea;
+  --bg1:#0f0f15;
+  --bg2:#1a1a2e;
+}
+
+*{box-sizing:border-box}
+
+/* ================= BODY ================= */
+body{
+  font-family:'Segoe UI',Arial,sans-serif;
+  margin:0;
+  padding:32px 16px;
+  background:linear-gradient(120deg,var(--bg1),var(--bg2),var(--bg1));
+  background-size:400% 400%;
+  animation:bgShift 40s ease infinite;
+  color:#e0e0e0;
+}
+@keyframes bgShift{
+  0%{background-position:0% 50%}
+  50%{background-position:100% 50%}
+  100%{background-position:0% 50%}
+}
+
+/* ================= HEADER ================= */
+h1{
+  text-align:center;
+  font-size:clamp(2rem,5vw,3rem);
+  color:var(--accent);
+  text-shadow:0 0 14px rgba(0,255,234,.55);
+  margin-bottom:24px;
+}
+
+/* ================= META ================= */
+.metadata{text-align:center;margin-bottom:32px}
+.metadata span{color:#fff;font-weight:600}
+
+/* ================= TIMELINE ================= */
+.commit-timeline{
+  display:flex;
+  justify-content:center;
+  gap:12px;
+  margin-bottom:40px;
+}
+.dot{
+  width:14px;height:14px;border-radius:50%;
+  background:#333;
+}
+.success{background:#00ff88}
+.failed{background:#ff4444}
+.pending{background:#ffaa00}
+
+/* ================= TECH STACK ================= */
+.tech-stack{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(140px,1fr));
+  gap:18px;
+  max-width:720px;
+  margin:0 auto 40px;
+}
+
+.card{
+  position:relative;
+  background:#11182a;
+  padding:18px 16px;
+  border-radius:14px;
+  text-align:center;
+  color:var(--accent);
+  font-weight:600;
+  cursor:pointer;
+  overflow:hidden;
+  transition:transform .25s ease, box-shadow .25s ease;
+}
+
+.card:hover{
+  transform:translateY(-6px) scale(1.04);
+  box-shadow:0 0 22px rgba(0,255,234,.6);
+}
+
+/* animated inner text */
+.card small{
+  position:absolute;
+  left:0;
+  right:0;
+  bottom:-30px;
+  opacity:0;
+  font-size:.8rem;
+  color:#cfcfcf;
+  transition:all .35s ease;
+}
+
+.card.active small{
+  bottom:10px;
+  opacity:1;
+}
+
+/* ================= DIAGRAM ================= */
+.diagram-wrapper{
+  max-width:1100px;
+  margin:0 auto 48px;
+  perspective:1600px;
+}
+
+.diagram{
+  position:relative;
+  padding:8px;
+  border-radius:20px;
+  background:#0b0f1a;
+  transform-style:preserve-3d;
+  transition:transform .25s ease;
+}
+
+/* OUTER GLOW BORDER */
+.diagram::before{
+  content:"";
+  position:absolute;
+  inset:-6px;
+  border-radius:24px;
+  background:linear-gradient(
+    120deg,
+    rgba(0,255,234,.55),
+    rgba(0,255,234,.15),
+    rgba(0,255,234,.55)
+  );
+  filter:blur(14px);
+  opacity:.75;
+  z-index:-2;
+  animation:borderFlow 6s linear infinite;
+}
+
+/* INNER SHARP BORDER */
+.diagram::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  border-radius:18px;
+  border:1.5px solid rgba(0,255,234,.4);
+  pointer-events:none;
+  z-index:2;
+}
+
+@keyframes borderFlow{
+  0%{opacity:.6}
+  50%{opacity:1}
+  100%{opacity:.6}
+}
+
+/* IMAGE */
+.diagram img{
+  width:100%;
+  display:block;
+  border-radius:16px;
+  background:#000;
+  transform:translateZ(80px);
+  box-shadow:
+    0 0 30px rgba(0,255,234,.25),
+    inset 0 0 60px rgba(0,0,0,.85);
+}
+
+/* ================= CONSOLE ================= */
+.console{
+  background:#0c0c0c;
+  border-radius:12px;
+  padding:16px;
+  font-family:monospace;
+  max-width:800px;
+  margin:0 auto 40px;
+  box-shadow:0 0 18px rgba(0,255,234,.6);
+  color:var(--accent);
+  min-height:120px;
+}
+
+/* ================= BUTTON ================= */
+.portfolio-link{
+  display:block;
+  width:max-content;
+  margin:0 auto 40px;
+  padding:14px 28px;
+  background:rgba(0,255,234,.15);
+  color:#fff;
+  border-radius:12px;
+  text-decoration:none;
+  font-weight:600;
+}
+.portfolio-link:hover{background:rgba(0,255,234,.25)}
+
+footer{text-align:center;font-size:.85rem;color:#aaa}
+
+/* ================= MOBILE ================= */
+@media(max-width:768px){
+  .diagram{transform:none!important}
+}
+</style>
+</head>
+
+<body>
+
+<h1>CI/CD Pipeline Demo</h1>
+
+<div class="metadata">
+  Build: <span id="build">--</span> |
+  Status: <span id="status">--</span>
+</div>
+
+<div class="commit-timeline">
+  <div class="dot success"></div>
+  <div class="dot failed"></div>
+  <div class="dot success"></div>
+  <div class="dot pending"></div>
+</div>
+
+<div class="tech-stack">
+  <div class="card">Jenkins<small>CI Automation</small></div>
+  <div class="card">Docker<small>Containers</small></div>
+  <div class="card">AWS ECR<small>Image Registry</small></div>
+  <div class="card">Git<small>Source Control</small></div>
+</div>
+
+<div class="diagram-wrapper" id="dw">
+  <div class="diagram" id="diagram">
+    <picture>
+      <source srcset="images/ci-cd-diagram-v2.webp" type="image/webp">
+      <img src="images/ci-cd-diagram-v2.png" alt="CI/CD Pipeline Diagram">
+    </picture>
+  </div>
+</div>
+
+<pre class="console" id="console">[SYSTEM] Initializing pipeline…</pre>
+
+<a class="portfolio-link" href="https://github.com/Aslam-space" target="_blank">
+  View GitHub Portfolio
+</a>
+
+<footer>© 2026 Aslam-space — CI/CD Demo</footer>
+
+<script>
+/* ===== CI Simulation ===== */
+const builds=[
+  'Build #301 → SUCCESS',
+  'Build #302 → SUCCESS',
+  'Build #303 → FAILED',
+  'Build #304 → RUNNING'
+];
+let i=0;
+setInterval(()=>{
+  document.getElementById('build').innerText=builds[i].split(' ')[1];
+  document.getElementById('status').innerText=builds[i].split('→')[1];
+  document.getElementById('console').innerText='[PIPELINE] '+builds[i];
+  i=(i+1)%builds.length;
+},3000);
+
+/* ===== TECH STACK CLICK ANIMATION ===== */
+document.querySelectorAll('.card').forEach(card=>{
+  card.addEventListener('click',()=>{
+    card.classList.toggle('active');
+  });
+});
+
+/* ===== TRUE 3D TILT (COMES OUT) ===== */
+const wrap=document.getElementById('dw');
+const diagram=document.getElementById('diagram');
+
+wrap.addEventListener('mousemove',e=>{
+  const r=wrap.getBoundingClientRect();
+  const x=e.clientX-r.left-r.width/2;
+  const y=e.clientY-r.top-r.height/2;
+  const rx=(y/r.height)*-14;
+  const ry=(x/r.width)*14;
+  diagram.style.transform=
+    `rotateX(${rx}deg) rotateY(${ry}deg) translateZ(90px)`;
+});
+wrap.addEventListener('mouseleave',()=>{
+  diagram.style.transform='rotateX(0) rotateY(0) translateZ(0)';
+});
+</script>
+
+</body>
+</html>
