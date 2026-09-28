@@ -1,0 +1,82 @@
+name: CI
+
+# Fast feedback on every push and pull request.
+# Jenkins stays responsible for pushing to ECR and deploying.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  IMAGE: ci-cd-demo:ci-${{ github.run_number }}
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Hadolint (Dockerfile)
+        run: docker run --rm -i hadolint/hadolint:v2.12.0-alpine hadolint - < Dockerfile
+
+      - name: ShellCheck (scripts)
+        run: shellcheck scripts/*.sh
+
+      - name: JavaScript syntax
+        run: node --check app/assets/app.js
+
+  build-test-scan:
+    name: Build, smoke test & scan
+    needs: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build image
+        env:
+          # Passed via env, never interpolated into the script: branch names are untrusted input.
+          BRANCH: ${{ github.head_ref || github.ref_name }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          docker build \
+            --build-arg BUILD_NUMBER="gha-${{ github.run_number }}" \
+            --build-arg GIT_COMMIT="$(git rev-parse --short HEAD)" \
+            --build-arg GIT_BRANCH="$BRANCH" \
+            --build-arg BUILD_DATE="$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            --build-arg BUILD_URL="$RUN_URL" \
+            -t "$IMAGE" .
+
+      - name: Smoke test (hardened runtime)
+        run: |
+          docker run -d --name smoke --read-only --tmpfs /tmp --cap-drop ALL -p 8080:8080 "$IMAGE"
+          scripts/smoke-test.sh http://localhost:8080
+          docker exec smoke nginx -t
+
+      - name: Container logs
+        if: failure()
+        run: docker logs smoke || true
+
+      - name: Trivy scan (fail on fixable CRITICAL)
+        run: |
+          mkdir -p reports
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+            aquasec/trivy:0.62.1 image --no-progress --format table "$IMAGE" | tee reports/trivy.txt
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+            aquasec/trivy:0.62.1 image --no-progress --exit-code 1 --severity CRITICAL --ignore-unfixed "$IMAGE"
+
+      - name: Upload scan report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-report
+          path: reports/
+          if-no-files-found: ignore

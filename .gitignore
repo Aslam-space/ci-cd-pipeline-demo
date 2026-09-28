@@ -1,0 +1,12 @@
+# Editor / OS
+*.swp
+*.swo
+*~
+.DS_Store
+.idea/
+.vscode/
+
+# Pipeline outputs
+build_info.txt
+reports/
+*.log
